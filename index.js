@@ -32,8 +32,9 @@ async function run() {
 
     // collections
     const jobsCollection = client.db("QuickHired").collection("jobs");
-    const applicationsCollection = client.db("QuickHired").collection("applications");
+    const applicationsCollection = client.db("QuickHired").collection("applications")
     // console.log(jobsCollection)
+    // console.log(applicationsCollection)
 
     // for showing jobs
     app.get('/jobs' , async(req,res)=>{
@@ -51,8 +52,10 @@ async function run() {
 
     // for creating job applicant request
     app.post('/applications' , async(req,res)=>{
-      const applications = req.body;
-      const result = await applicationsCollection.insertOne(applications);
+      const application = req.body;
+      const result = await applicationsCollection.insertOne(application);
+      // console.log(result)
+      // console.log(application)
       res.send(result);
     })
    
