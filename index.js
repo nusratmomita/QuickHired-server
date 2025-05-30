@@ -30,15 +30,16 @@ async function run() {
   try {
     await client.connect();
 
-    // collection
+    // collections
     const jobsCollection = client.db("QuickHired").collection("jobs");
+    const applicationsCollection = client.db("QuickHired").collection("applications");
     // console.log(jobsCollection)
 
     // for showing jobs
     app.get('/jobs' , async(req,res)=>{
         const result = await jobsCollection.find().toArray();
         res.send(result);
-    }) 
+    })   
 
     // for showing individual job details
     app.get('/jobs/:id' , async(req,res)=>{
@@ -47,6 +48,13 @@ async function run() {
         const result = await jobsCollection.findOne(query);
         res.send(result)
     }) 
+
+    // for creating job applicant request
+    app.post('/applications' , async(req,res)=>{
+      const applications = req.body;
+      const result = await applicationsCollection.insertOne(applications);
+      res.send(result);
+    })
    
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
