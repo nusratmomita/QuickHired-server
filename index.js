@@ -38,17 +38,31 @@ async function run() {
 
     // for showing jobs
     app.get('/jobs' , async(req,res)=>{
-        const result = await jobsCollection.find().toArray();
-        res.send(result);
+      const email = req.query.email
+      const query = {}
+
+      if(email){
+        query.hr_email = email;
+      }
+      
+      const result = await jobsCollection.find().toArray();
+      res.send(result);
     })   
 
     // for showing individual job details
     app.get('/jobs/:id' , async(req,res)=>{
-        const id = req.params.id;
-        const query = { _id : new ObjectId(id) };
-        const result = await jobsCollection.findOne(query);
-        res.send(result)
+      const id = req.params.id;
+      const query = { _id : new ObjectId(id) };
+      const result = await jobsCollection.findOne(query);
+      res.send(result)
     }) 
+
+    // for creating new jobs by recruiter
+    app.post('/jobs' , async(req,res)=>{
+      const newJob = req.body;
+      const result = await jobsCollection.insertOne(newJob);
+      res.send(result);
+    })
 
     // for creating job applicant request
     app.post('/applications' , async(req,res)=>{
@@ -57,6 +71,32 @@ async function run() {
       // console.log(result)
       // console.log(application)
       res.send(result);
+    })
+
+    // for showing applications for each email 
+    app.get('/applications' , async(req,res)=>{
+      const email = req.query.email;
+
+      const query = {
+        applicant : email 
+      } 
+
+      const result = await applicationsCollection.find(query).toArray();
+      
+      // doing aggregation[connecting two collections together]. tho it is a bad way
+      for(const application of result){
+        const id = application.id // applicationsCollection's id
+        const jobQuery = { _id : new ObjectId(id) }; // jobsCollection's _id
+
+        const job = await jobsCollection.findOne(jobQuery);
+
+        application.company = job.company
+        application.company_logo = job.company_logo
+        application.title = job.title
+        application.location = job.location
+      }
+
+      res.send(result)
     })
    
     await client.db("admin").command({ ping: 1 });
