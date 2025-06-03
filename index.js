@@ -44,10 +44,11 @@ async function run() {
       if(email){
         query.hr_email = email;
       }
-      
-      const result = await jobsCollection.find().toArray();
+
+      const result = await jobsCollection.find(query).toArray();
+      // console.log(query,result)
       res.send(result);
-    })   
+    })    
 
     // for showing individual job details
     app.get('/jobs/:id' , async(req,res)=>{
@@ -61,6 +62,14 @@ async function run() {
     app.post('/jobs' , async(req,res)=>{
       const newJob = req.body;
       const result = await jobsCollection.insertOne(newJob);
+      res.send(result);
+    })
+
+    // for showing total applications for a particular job
+    app.get('/applications/job/:id' , async(req,res)=>{
+      const job_id = req.params.id;
+      const query = { id: job_id };
+      const result = await applicationsCollection.find(query).toArray();
       res.send(result);
     })
 
@@ -95,7 +104,20 @@ async function run() {
         application.title = job.title
         application.location = job.location
       }
+      res.send(result)
+    })
 
+    // for updating the application status
+    app.patch('/applications/:id', async(req,res)=>{
+      const id = req.params.id;
+      const filter = { _id : new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          status : req.body.status
+        }
+      }
+      const result = await applicationsCollection.updateOne(filter,updatedDoc);
+      console.log(id,filter,updatedDoc,result)
       res.send(result)
     })
    
