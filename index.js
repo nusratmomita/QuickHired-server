@@ -2,16 +2,18 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
 const express = require('express')
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 const jsxRuntime = require('react/jsx-runtime');
 const port = process.env.PORT || 8000;
 
 const app = express();
 
-// QuickHired
-// h8QWJLygU83Wq3rc
 
 // middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173/'],// from where the request is coming(our client side)
+  credentials: true // to allow cookies to be sent with requests(allowing cookies)
+}));
 app.use(express.json());
 
 
@@ -33,8 +35,15 @@ async function run() {
     // collections
     const jobsCollection = client.db("QuickHired").collection("jobs");
     const applicationsCollection = client.db("QuickHired").collection("applications")
-    // console.log(jobsCollection)
-    // console.log(applicationsCollection)
+
+    // * creating JWT token related APIs
+    app.post('/jwt' , async(req,res)=>{
+      const {email} = req.body;
+      const user = {email};
+      // console.log(user);
+      const token = jwt.sign(user , process.env.JWT_ACCESS_SECRET , {expiresIn: '1h'});
+      res.send({token});
+    })
 
     // for showing jobs
     app.get('/jobs' , async(req,res)=>{
@@ -46,7 +55,6 @@ async function run() {
       }
 
       const result = await jobsCollection.find(query).toArray();
-      // console.log(query,result)
       res.send(result);
     })    
 
@@ -77,8 +85,6 @@ async function run() {
     app.post('/applications' , async(req,res)=>{
       const application = req.body;
       const result = await applicationsCollection.insertOne(application);
-      // console.log(result)
-      // console.log(application)
       res.send(result);
     })
 
@@ -117,7 +123,6 @@ async function run() {
         }
       }
       const result = await applicationsCollection.updateOne(filter,updatedDoc);
-      console.log(id,filter,updatedDoc,result)
       res.send(result)
     })
    
