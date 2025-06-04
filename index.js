@@ -2,7 +2,10 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
 const express = require('express')
 const cors = require('cors');
+
 const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
+
 const jsxRuntime = require('react/jsx-runtime');
 const port = process.env.PORT || 8000;
 
@@ -11,10 +14,38 @@ const app = express();
 
 // middleware
 app.use(cors({
-  origin: ['http://localhost:5173/'],// from where the request is coming(our client side)
+  origin: ['http://localhost:5173'],// from where the request is coming(our client side)
   credentials: true // to allow cookies to be sent with requests(allowing cookies)
 }));
 app.use(express.json());
+app.use(cookieParser());
+
+const logger = (req,res,next)=>{
+  console.log("Inside the logger middleware");
+  next();// using this so that the request can continue to the next middleware or route handler (going to the next execution)
+}
+
+const verifyingToken = (req,res,next) => {
+  console.log("Inside the verifyingToken middleware");
+
+  const token = req?.cookies?.token;// getting the toke for the cookies 
+  // console.log(token)
+
+  if(!token){
+    return res.status(401).send({massage : "Unauthorized access. No token provided."});
+  }
+
+  else{
+    jwt.verify(token , process.env.JWT_ACCESS_SECRET, (error , decoded)=>{
+      if(error){
+        return res.status(401).send({massage : "Unauthorized access. No token provided."});
+      }
+      // console.log(decoded)
+      req.decoded = decoded;// putting the decoded token in the request object so that it can be used in the next middleware or route handler
+      next();
+    })
+  }
+}
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_Password}@cluster0.1k8uoge.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -42,7 +73,15 @@ async function run() {
       const user = {email};
       // console.log(user);
       const token = jwt.sign(user , process.env.JWT_ACCESS_SECRET , {expiresIn: '1h'});
-      res.send({token});
+
+
+      res.cookie('token' , token , {
+        httpOnly: true,// It can only be accessed by the server.It cannot be accessed via JavaScript using document.cookie.
+        secure: false
+      })
+
+      res.send({token,success:true});
+
     })
 
     // for showing jobs
@@ -89,12 +128,20 @@ async function run() {
     })
 
     // for showing applications for each email 
-    app.get('/applications' , async(req,res)=>{
+    app.get('/applications' , logger , verifyingToken , async(req,res)=>{
       const email = req.query.email;
+
+      // for checking if we are not providing X's data to Y's account
+      // if the email in the query is not the same as the email in the decoded token, then return 403 Forbidden 
+      if(email !== req.decoded.email){
+        return res.status(403).send({message: "Forbidden access"});
+      }
 
       const query = {
         applicant : email 
       } 
+
+      console.log("Inside applications API" , req.cookies);// trying to get the cookie
 
       const result = await applicationsCollection.find(query).toArray();
       
